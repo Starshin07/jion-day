@@ -119,6 +119,20 @@ select{font:inherit;padding:10px 12px;border:2px solid var(--line);border-radius
 .ytwrap{position:relative;width:100%;aspect-ratio:16/9;margin-top:10px;border-radius:14px;overflow:hidden;background:#000}
 .ytwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 audio{width:100%;margin-top:8px}
+.prow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:2px solid var(--line);border-radius:14px;min-height:52px}
+.prow.on{opacity:.55}
+.prow.on .t{text-decoration:line-through}
+.prow .t{flex:1;font-size:16px;overflow-wrap:anywhere}
+.pchk{all:unset;cursor:pointer;display:grid;place-items:center;flex:none}
+.pchk .box{width:28px;height:28px;border:2px solid var(--line);border-radius:8px;display:grid;place-items:center;background:var(--surface)}
+.pchk .box svg{width:18px;height:18px;opacity:0}
+.prow.on .pchk .box{background:var(--primary);border-color:var(--primary)}
+.prow.on .pchk .box svg{opacity:1;color:#fff}
+.who{font-size:12px;font-weight:700;border-radius:8px;padding:2px 7px;flex:none;border:1.5px solid}
+.w-both{color:var(--muted);border-color:var(--line)}
+.w-mom{color:var(--praise);border-color:var(--praise)}
+.w-dad{color:var(--book);border-color:var(--book)}
+.px{all:unset;cursor:pointer;color:var(--muted);font-size:16px;padding:6px 4px;flex:none;min-width:28px;text-align:center}
 .picks{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pickbox{all:unset;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;border:2px solid var(--book);border-radius:16px;padding:12px 10px;background:color-mix(in srgb,var(--book) 7%,var(--surface));cursor:pointer}
 .pickbox.empty-pick{border-style:dashed;border-color:var(--line);background:none;cursor:default}
@@ -308,8 +322,8 @@ var TABS=[
  {k:'heart',n:'마음',i:'<path d="M12 20s-7-4.4-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.6-9 9-9 9z"/>'}
 ];
 
-var S={cfg:{},equip:{},tasks:[],checks:[],praise:[],words:[],books:[],folders:[],songs:[],reqs:[],moods:[],inv:[],prep:[],draws:[],pet:{},sched:{},msg:{},
- tab:'home',pad:false,cal:null,parent:false,loaded:{},wf:'all',bf:'all',wo:{},wq:'',setup:false,dbErr:'',authErr:'',gp:'m',bp:'m',noDb:false,slow:false};
+var S={cfg:{},equip:{},tasks:[],checks:[],praise:[],words:[],books:[],folders:[],songs:[],reqs:[],moods:[],inv:[],prep:[],draws:[],pet:{},sched:{},msg:{},ptasks:[],
+ tab:'home',pad:false,cal:null,parent:false,loaded:{},wf:'all',bf:'all',wo:{},wq:'',ptWho:'both',ptDone:false,setup:false,dbErr:'',authErr:'',gp:'m',bp:'m',noDb:false,slow:false};
 var DB=null,ASSETS=null,Q={},rq=0;
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -693,6 +707,26 @@ function lightbox(src,cap,edit){
   d.addEventListener('click',function(e){if(e.target===d||e.target.dataset.x||e.target.closest('[data-act]'))d.remove()});
   document.body.appendChild(d)}
 
+/* ---------- 엄마·아빠 할 일 ---------- */
+var WHO=[['both','같이'],['mom','엄마'],['dad','아빠']];
+function whoName(k){var w=WHO.filter(function(x){return x[0]===k})[0];return w?w[1]:'같이'}
+function ptaskCard(){
+  if(!S.parent)return '';
+  var all=S.ptasks.slice().sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0)});
+  var open=all.filter(function(t){return !t.done}),done=all.filter(function(t){return t.done});
+  var row=function(t){
+    return '<div class="prow'+(t.done?' on':'')+'">'
+     +'<button class="pchk" data-act="ptTog" data-id="'+esc(t.id)+'" aria-pressed="'+(!!t.done)+'" aria-label="'+esc(t.text)+'"><span class="box">'+check()+'</span></button>'
+     +'<span class="who w-'+esc(t.who||'both')+'">'+esc(whoName(t.who))+'</span>'
+     +'<span class="t">'+esc(t.text)+'</span>'
+     +'<button class="px" data-act="ptDel" data-id="'+esc(t.id)+'" aria-label="지우기">✕</button></div>'};
+  return '<div class="card stack" style="gap:10px"><div class="tl"><h2>엄마·아빠 할 일</h2><span class="muted small">'+open.length+'개 남음</span></div>'
+   +(open.length?open.map(row).join(''):'<div class="empty" style="padding:14px">남은 일이 없어요.</div>')
+   +(done.length?'<button class="btn alt" data-act="ptShow">'+(S.ptDone?'끝낸 일 접기':'끝낸 일 '+done.length+'개 보기')+'</button>'+(S.ptDone?done.map(row).join(''):''):'')
+   +'<div class="row"><input type="text" id="ptnew" class="grow" placeholder="예: 지온이 준비물 사기" autocomplete="off"><button class="btn alt" data-act="ptAdd">넣기</button></div>'
+   +'<div class="seg">'+WHO.map(function(w){return '<button class="'+(S.ptWho===w[0]?'on':'')+'" data-act="ptWho" data-k="'+w[0]+'">'+w[1]+'</button>'}).join('')+'</div>'
+   +'<p class="small muted" style="margin:0">지온이 화면에는 안 보여요. 부모 모드에서만 보여요.</p></div>'}
+
 /* ---------- 엄마·아빠 메시지 ---------- */
 function msgCard(){
   var m=S.msg||{};
@@ -871,7 +905,7 @@ function viewHome(){
   var tasks=activeTasks(),tc=todayCheck(),done=tc.done||[],all=tasks.length>0&&tc.completed;
   var list=taskList(tasks,done);
   var banner=all?'<div class="card done-banner s-mission">'+sMission()+'<span>오늘 임무 완수!</span></div>':'';
-  return '<div class="home"><div class="stack">'+hero()+news()+'</div><div class="stack">'+msgCard()
+  return '<div class="home"><div class="stack">'+hero()+news()+'</div><div class="stack">'+ptaskCard()+msgCard()
    +'<div class="card stack" style="gap:10px"><div class="tl"><h2>오늘 할 일</h2><span class="muted small">'+done.filter(function(i){return tasks.some(function(t){return t.id===i})}).length+' / '+tasks.length+'</span></div>'+list
    +'<button class="btn alt" data-act="timer">⏱ 집중 타이머</button></div>'+banner+schedCard()+prepCard()
    +'<div class="stamps"><div class="card stamp s-mission">'+sMission()+'<b>'+missionCount()+'</b><span class="small muted">임무완수</span></div>'
@@ -1018,6 +1052,8 @@ function render(){
   else if(S.pad){app.innerHTML=viewPad();nav.innerHTML='';return}
   else body=S.tab==='praise'?viewPraise():S.tab==='words'?viewWords():S.tab==='books'?viewBooks():S.tab==='draw'?viewDraw():S.tab==='music'?viewMusic():S.tab==='heart'?viewHeart():viewHome();
   app.innerHTML=head+body;
+  var ptn=$('#ptnew');
+  if(ptn)ptn.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();A.ptAdd()}});
   var wqEl=$('#wq');
   if(wqEl)wqEl.addEventListener('input',function(){S.wq=wqEl.value;clearTimeout(window.__wqT);
     window.__wqT=setTimeout(function(){var pos=wqEl.selectionStart;render();var n=$('#wq');if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}},260)});
@@ -1037,6 +1073,15 @@ var A={
  prepEdit:function(){prepSheet(today())},
  schedEdit:function(){schedSheet(new Date().getDay())},
  msgNew:function(){msgSheet()},
+ ptWho:function(el){S.ptWho=el.dataset.k;render()},
+ ptShow:function(){S.ptDone=!S.ptDone;render()},
+ ptAdd:function(){var e=$('#ptnew');if(!e)return;var v=e.value.trim();
+  if(!v){toast('할 일을 적어 주세요');return}
+  setDoc(newRef('ptasks').path,{text:v,who:S.ptWho||'both',done:false,createdAt:Date.now()});
+  e.value='';toast('넣었어요')},
+ ptTog:function(el){var t=S.ptasks.filter(function(x){return x.id===el.dataset.id})[0];if(!t)return;
+  var n=Object.assign({},t);delete n.id;n.done=!t.done;n.doneAt=n.done?Date.now():0;setDoc('ptasks/'+t.id,n)},
+ ptDel:function(el){delDoc('ptasks/'+el.dataset.id);toast('지웠어요')},
  cfgSave:function(){
   var o=pickCfg($('#cfgbox').value);
   if(!o||!o.apiKey||!o.projectId){toast('설정을 다시 확인해 주세요');return}
@@ -1296,7 +1341,7 @@ function fbStart(){
     subDoc('app/config','cfg');subDoc('app/equip','equip');
     subCol('tasks','tasks');subCol('checks','checks');subCol('praise','praise');subCol('words','words');
     subCol('books','books');subCol('bookFolders','folders');subCol('songs','songs');subCol('requests','reqs');subCol('moods','moods');subCol('inventory','inv');
-    subCol('prep','prep');subCol('draws','draws');subDoc('app/pet','pet');subDoc('app/schedule','sched');subDoc('app/message','msg');
+    subCol('prep','prep');subCol('draws','draws');subDoc('app/pet','pet');subDoc('app/schedule','sched');subDoc('app/message','msg');subCol('ptasks','ptasks');
     var iv=setInterval(function(){if(S.loaded.cfg&&S.loaded.tasks&&S.loaded.checks){clearTimeout(timer);clearInterval(iv);render()}},300)})}
 if(window.__FB)fbStart();else{window.addEventListener('fbready',fbStart);setTimeout(function(){if(!FB&&!S.setup){S.noDb=true;render()}},15000)}
 if('serviceWorker' in navigator)window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});
