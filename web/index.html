@@ -986,9 +986,7 @@ var A={
  schedEdit:function(){schedSheet(new Date().getDay())},
  msgNew:function(){msgSheet()},
  cfgSave:function(){
-  var t=$('#cfgbox').value.trim();
-  var m=t.match(/\{[\s\S]*\}/);if(m)t=m[0];
-  var o=null;try{o=JSON.parse(t)}catch(e){try{o=(new Function('return ('+t+')'))()}catch(e2){o=null}}
+  var o=pickCfg($('#cfgbox').value);
   if(!o||!o.apiKey||!o.projectId){toast('설정을 다시 확인해 주세요');return}
   lsSet('jion.cfg',JSON.stringify(o));S.setup=true;render()},
  cfgReset:function(){lsSet('jion.cfg','');lsSet('jion.fam','');location.reload()},
@@ -1186,6 +1184,24 @@ S.pad=(location.hash==='#pad');
 window.addEventListener('hashchange',function(){S.pad=(location.hash==='#pad');render()});
 var lastDay=today();setInterval(function(){if(today()!==lastDay){lastDay=today();render()}},60000);
 
+function pickCfg(t){
+  t=String(t||'');
+  var i=t.indexOf('firebaseConfig'),start=-1;
+  if(i>-1)start=t.indexOf('{',i);
+  if(start<0)start=t.indexOf('{');
+  if(start<0)return null;
+  var d=0,end=-1,j,ch,q=0,prev='';
+  for(j=start;j<t.length;j++){ch=t.charAt(j);
+    if(q){if(ch===q&&prev!=='\\')q=0;prev=ch;continue}
+    if(ch==='"'||ch==="'"||ch==='`'){q=ch;prev=ch;continue}
+    if(ch==='{')d++;
+    else if(ch==='}'){d--;if(d===0){end=j+1;break}}
+    prev=ch}
+  if(end<0)return null;
+  var src=t.slice(start,end);
+  try{return JSON.parse(src)}catch(e){}
+  try{return (new Function('return ('+src+')'))()}catch(e){}
+  return null}
 /* ---------- 연결 화면 ---------- */
 function setupView(step){
   var c=fbCfg();
