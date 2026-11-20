@@ -1,4 +1,4 @@
-var V='jion-v2';
+var V='jion-v3';
 var CORE=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png',
 './char/j1.png','./char/j2.png','./char/j3.png','./char/j4.png','./char/j5.png','./char/j6.png',
 './char/m1.png','./char/m2.png','./char/m3.png','./char/m4.png','./char/m5.png','./char/m6.png',
@@ -11,7 +11,8 @@ self.addEventListener('fetch',function(e){
   var r=e.request;if(r.method!=='GET')return;
   var u=new URL(r.url);
   if(u.origin!==self.location.origin){
-    if(u.hostname==='www.gstatic.com'||u.hostname==='fonts.googleapis.com'||u.hostname==='fonts.gstatic.com'){
+    if(u.hostname==='www.gstatic.com'||u.hostname==='fonts.googleapis.com'||u.hostname==='fonts.gstatic.com'
+      ||u.hostname==='cdn.jsdelivr.net'||u.hostname==='unpkg.com'||u.hostname==='tessdata.projectnaptha.com'){
       e.respondWith(caches.open(V+'-ext').then(function(c){
         return c.match(r).then(function(hit){
           var net=fetch(r).then(function(res){if(res&&res.status===200)c.put(r,res.clone());return res}).catch(function(){return hit});
