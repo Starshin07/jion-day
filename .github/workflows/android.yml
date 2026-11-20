@@ -44,6 +44,16 @@ jobs:
           path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
+      - name: 예전 앱 파일 치우기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ids=$(gh api /repos/${GITHUB_REPOSITORY}/releases/tags/latest --jq '.assets[] | select(.name != "app-release.apk") | .id' 2>/dev/null || true)
+          for id in $ids; do
+            echo "deleting asset $id"
+            gh api -X DELETE /repos/${GITHUB_REPOSITORY}/releases/assets/$id || true
+          done
+
       - name: 내려받기 쉽게 릴리스로 올리기
         uses: softprops/action-gh-release@v2
         with:
