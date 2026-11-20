@@ -116,6 +116,14 @@ select{font:inherit;padding:10px 12px;border:2px solid var(--line);border-radius
 .msgcard{border:2px solid var(--praise);background:color-mix(in srgb,var(--praise) 10%,var(--surface))}
 .msgtext{margin:0;font-family:var(--font-display);font-size:24px;line-height:1.45;white-space:pre-wrap}
 .pad .msgtext{font-size:32px}
+.picks{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pickbox{all:unset;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;border:2px solid var(--book);border-radius:16px;padding:12px 10px;background:color-mix(in srgb,var(--book) 7%,var(--surface));cursor:pointer}
+.pickbox.empty-pick{border-style:dashed;border-color:var(--line);background:none;cursor:default}
+.pickbox .pk{font-family:var(--font-display);color:var(--book);font-size:16px}
+.pickbox img{width:84px;height:112px;object-fit:cover;border-radius:10px}
+.pickbox b{font-size:16px;line-height:1.3}
+.chip.pick{background:color-mix(in srgb,var(--book) 16%,var(--surface));border-color:var(--book);color:var(--book);font-weight:700}
+input[type=search]{font:inherit;padding:12px 14px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);min-height:48px}
 .sch{display:flex;align-items:center;gap:12px;padding:10px 14px;border:2px solid var(--line);border-radius:14px;min-height:52px;font-size:17px}
 .sch .tm{font-weight:700;color:var(--muted);min-width:82px;font-size:15px}
 .sch .t{font-weight:500;flex:1}
@@ -298,7 +306,7 @@ var TABS=[
 ];
 
 var S={cfg:{},equip:{},tasks:[],checks:[],praise:[],words:[],books:[],folders:[],songs:[],reqs:[],moods:[],inv:[],prep:[],draws:[],pet:{},sched:{},msg:{},
- tab:'home',pad:false,cal:null,parent:false,loaded:{},wf:'all',bf:'all',wo:{},setup:false,dbErr:'',authErr:'',gp:'m',bp:'m',noDb:false,slow:false};
+ tab:'home',pad:false,cal:null,parent:false,loaded:{},wf:'all',bf:'all',wo:{},wq:'',setup:false,dbErr:'',authErr:'',gp:'m',bp:'m',noDb:false,slow:false};
 var DB=null,ASSETS=null,Q={},rq=0;
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -893,9 +901,13 @@ function viewPraise(){
    +'<div class="card"><h3 style="margin-bottom:10px">도장판</h3><div class="wall">'+wall+'</div></div></div>'}
 
 function viewWords(){
-  var wc=S.words.length,pl=perLevel(),list=S.words.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)}).filter(function(w){return S.wf==='all'||w.lang===S.wf});
+  var wc=S.words.length,pl=perLevel(),q=(S.wq||'').trim().toLowerCase();
+  var list=S.words.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)})
+    .filter(function(w){return S.wf==='all'||w.lang===S.wf})
+    .filter(function(w){if(!q)return true;
+      return ((w.text||'')+' '+(w.meaning||'')+' '+(w.memo||'')).toLowerCase().indexOf(q)>-1});
   var cards=list.map(function(w){
-    var op=!!S.wo[w.id];
+    var op=!!S.wo[w.id]||!!q;
     return '<div class="card wcard"><button class="whead" data-act="togW" data-id="'+esc(w.id)+'" aria-expanded="'+op+'">'
      +(w.photo?'<img class="wth" src="'+img(w.photo)+'" alt="">':'')
      +'<h3 class="grow">'+esc((w.text||'').split('\n')[0]||'(사진 단어)')+'</h3><span class="chip">'+(w.lang==='en'?'영어':'한글')+'</span>'
@@ -907,14 +919,38 @@ function viewWords(){
      +(w.meaning?'<div class="bubble"><span class="small muted">엄마·아빠가 알려준 뜻</span><br>'+esc(w.meaning)+'</div>':'<div class="bubble muted small">엄마·아빠가 뜻을 알려줄 거예요</div>')
      +'<div class="row" style="margin-top:8px"><span class="small muted grow">'+esc(fmtDate(w.date))+'</span>'
      +(S.parent?'<button class="btn alt" data-act="meaning" data-id="'+esc(w.id)+'">'+(w.meaning?'뜻 고치기':'뜻 쓰기')+'</button><button class="btn alt" data-act="delWord" data-id="'+esc(w.id)+'" aria-label="지우기">지우기</button>':'')+'</div></div>':'')
-     +'</div>'}).join('')||'<div class="empty">아직 사전이 비어 있어요.<br>모르는 단어를 만나면 사진을 찍거나 써서 올려 보세요.</div>';
+     +'</div>'}).join('')||(q?'<div class="empty">찾는 단어가 없어요.<br>다른 말로 찾아 보세요.</div>':'<div class="empty">아직 사전이 비어 있어요.<br>모르는 단어를 만나면 사진을 찍거나 써서 올려 보세요.</div>');
   return '<div class="stack dictbg" style="padding:12px;'+(S.cfg.dictBg?'background-image:linear-gradient(var(--veil),var(--veil)),url('+img(S.cfg.dictBg)+')':'background-image:linear-gradient(var(--veil),var(--veil)),'+maruPattern()+';background-size:auto,180px 180px;background-repeat:repeat')+'"><div class="card stack" style="gap:10px"><div class="tl"><h2>지온이 전용 사전</h2><span class="s-praise" style="font-family:var(--font-display);font-size:26px">LV '+level()+'</span></div>'
    +'<p class="muted small" style="margin:0">내가 모은 단어 '+wc+'개 · 단어 '+pl+'개마다 레벨 업</p>'
    +'<div class="tl small muted"><span>다음 레벨까지</span><span>'+(wc%pl)+' / '+pl+'</span></div><div class="bar"><i style="width:'+Math.round((wc%pl)/pl*100)+'%"></i></div>'
    +'<button class="btn" data-act="addWord">사전에 단어 올리기</button></div>'
+   +'<div class="row"><input type="search" id="wq" class="grow" placeholder="단어나 뜻으로 찾기" autocomplete="off" value="'+esc(S.wq||'')+'">'+(q?'<button class="btn alt" data-act="wqClear">지우기</button>':'')+'</div>'
+   +(q?'<p class="small muted" style="margin:0">찾은 단어 '+list.length+'개</p>':'')
    +'<div class="seg"><button class="'+(S.wf==='all'?'on':'')+'" data-act="wf" data-k="all">전체</button><button class="'+(S.wf==='en'?'on':'')+'" data-act="wf" data-k="en">영어</button><button class="'+(S.wf==='ko'?'on':'')+'" data-act="wf" data-k="ko">한글</button></div>'
    +cards+'</div>'}
 
+/* ---------- 이달의 책 · 올해의 책 ---------- */
+function curM(){return today().slice(0,7)}
+function curY(){return today().slice(0,4)}
+function bookOf(kind,period){return S.books.filter(function(b){return (kind==='m'?b.pickM:b.pickY)===period})[0]||null}
+function pickTile(kind,b,period){
+  var name=kind==='m'?'이달의 책':'올해의 책',when=kind==='m'?((+period.slice(5,7))+'월'):(period+'년');
+  if(!b)return '<div class="pickbox empty-pick"><span class="pk">'+name+'</span><p class="muted small" style="margin:6px 0 0">'+when+' 책을 아직 안 뽑았어요.<br>책을 누르고 뽑아 보세요.</p></div>';
+  return '<button class="pickbox" data-act="book" data-id="'+esc(b.id)+'"><span class="pk">'+name+'</span>'
+   +(b.photo?'<img src="'+img(b.photo)+'" alt="">':'')
+   +'<b>'+esc(b.title)+'</b><span class="stars">'+stars(b.rating)+'</span></button>'}
+function pickCard(){
+  if(!S.books.length)return '';
+  return '<div class="card stack" style="gap:10px"><h2>지온이가 뽑은 책</h2>'
+   +'<div class="picks">'+pickTile('m',bookOf('m',curM()),curM())+pickTile('y',bookOf('y',curY()),curY())+'</div></div>'}
+function setPick(id,kind){
+  var period=kind==='m'?curM():curY(),field=kind==='m'?'pickM':'pickY';
+  var cur=bookOf(kind,period);
+  if(cur&&cur.id===id){var c0=Object.assign({},cur);delete c0.id;c0[field]='';setDoc('books/'+id,c0);toast('뽑기를 취소했어요');return}
+  if(cur){var c1=Object.assign({},cur);delete c1.id;c1[field]='';setDoc('books/'+cur.id,c1)}
+  var b=S.books.filter(function(x){return x.id===id})[0];if(!b)return;
+  var n=Object.assign({},b);delete n.id;n[field]=period;setDoc('books/'+id,n);
+  popStamp('book',kind==='m'?'이달의 책!':'올해의 책!')}
 function viewBooks(){
   var n=S.books.length,fo=S.folders.slice().sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0)});
   var chips='<button class="'+(S.bf==='all'?'on':'')+'" data-act="bf" data-k="all">전체</button>'+fo.map(function(f){return '<button class="'+(S.bf===f.id?'on':'')+'" data-act="bf" data-k="'+esc(f.id)+'">'+esc(f.name)+'</button>'}).join('')+'<button data-act="newFolder">+ 폴더</button>';
@@ -922,12 +958,15 @@ function viewBooks(){
   var tile=function(b){var f=fo.filter(function(x){return x.id===b.folder})[0];
     return '<button class="card bcard" data-act="book" data-id="'+esc(b.id)+'" style="text-align:left;padding:10px">'
      +(b.photo?'<img class="thumb" src="'+img(b.photo)+'" alt="">':'<div class="thumb" style="display:grid;place-items:center;font-family:var(--font-display);font-size:18px;padding:10px;text-align:center">'+esc(b.title)+'</div>')
-     +'<div style="margin-top:8px;font-weight:700">'+esc(b.title)+'</div><div class="stars">'+stars(b.rating)+'</div>'+(f?'<span class="chip">'+esc(f.name)+'</span>':'')+'</button>'};
+     +'<div style="margin-top:8px;font-weight:700">'+esc(b.title)+'</div><div class="stars">'+stars(b.rating)+'</div>'
+     +(b.pickY?'<span class="chip pick">👑 올해의 책</span>':'')+(b.pickM?'<span class="chip pick">⭐ '+(+String(b.pickM).slice(5,7))+'월의 책</span>':'')
+     +(f?'<span class="chip">'+esc(f.name)+'</span>':'')+'</button>'};
   var groups=groupBy(list,S.bp,function(b){return b.date||ymd(new Date(b.createdAt||Date.now()))});
   var cards=groups.map(function(g){return '<div class="card"><h3 style="margin-bottom:10px">'+esc(g.label)+' <span class="small muted">'+g.items.length+'권</span></h3><div class="grid sm">'+g.items.map(tile).join('')+'</div></div>'}).join('');
   return '<div class="stack dictbg" style="padding:12px;background-image:linear-gradient(var(--veil),var(--veil)),'+maruPattern()+';background-size:auto,180px 180px;background-repeat:repeat"><div class="card stack" style="gap:10px"><div class="tl"><h2>독서 기록</h2><span class="s-book" style="font-family:var(--font-display);font-size:26px">'+esc(readTitle(n))+'</span></div>'
    +'<div class="row s-book">'+sBook().replace('<svg','<svg width="44" height="44"')+'<span style="font-family:var(--font-display);font-size:28px">독서왕 도장 '+n+'개</span></div>'
    +'<p class="muted small" style="margin:0">책 한 권을 별점과 소감과 함께 기록하면 도장이 하나 찍혀요.</p><button class="btn" data-act="addBook">읽은 책 기록하기</button></div>'
+   +pickCard()
    +'<div class="seg">'+chips+'</div>'+periodSeg('bp',S.bp)
    +(cards||'<div class="empty">아직 기록한 책이 없어요.</div>')+'</div>'}
 
@@ -970,6 +1009,9 @@ function render(){
   else if(S.pad){app.innerHTML=viewPad();nav.innerHTML='';return}
   else body=S.tab==='praise'?viewPraise():S.tab==='words'?viewWords():S.tab==='books'?viewBooks():S.tab==='draw'?viewDraw():S.tab==='music'?viewMusic():S.tab==='heart'?viewHeart():viewHome();
   app.innerHTML=head+body;
+  var wqEl=$('#wq');
+  if(wqEl)wqEl.addEventListener('input',function(){S.wq=wqEl.value;clearTimeout(window.__wqT);
+    window.__wqT=setTimeout(function(){var pos=wqEl.selectionStart;render();var n=$('#wq');if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}},260)});
   syncWidget();
   nav.innerHTML='<div>'+TABS.map(function(t){return '<button class="'+(S.tab===t.k?'on':'')+'" data-act="tab" data-k="'+t.k+'" '+(S.tab===t.k?'aria-current="page"':'')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+t.i+'</svg>'+t.n+'</button>'}).join('')+'</div>'}
 
@@ -979,6 +1021,7 @@ var A={
  tab:function(el){S.tab=el.dataset.k;render();window.scrollTo(0,0)},
  togW:function(el){var id=el.dataset.id;S.wo[id]=!S.wo[id];render()},
  wf:function(el){S.wf=el.dataset.k;render()},
+ wqClear:function(){S.wq='';render();var e=$('#wq');if(e)e.focus()},
  gp:function(el){S.gp=el.dataset.k;render()},
  bp:function(el){S.bp=el.dataset.k;render()},
  timer:function(){timerSheet()},
@@ -1089,8 +1132,13 @@ var A={
  book:function(el){
   var b=S.books.filter(function(x){return x.id===el.dataset.id})[0];if(!b)return;
   var f=S.folders.filter(function(x){return x.id===b.folder})[0];
-  openSheet(b.title,(b.photo?'<button data-act="zoom" data-src="'+img(b.photo)+'" data-cap="'+esc(b.title)+'" style="all:unset;display:block;cursor:zoom-in"><img class="prev" style="max-height:300px" src="'+img(b.photo)+'" alt="눌러서 크게 보기"></button><p class="small muted" style="margin:4px 0 0">사진을 누르면 크게 보여요</p>':'')+'<div class="stars" style="font-size:26px;margin-top:8px">'+stars(b.rating)+'</div><p style="white-space:pre-wrap">'+esc(b.note)+'</p><p class="small muted">'+esc(fmtDate(b.date))+(f?' · '+esc(f.name):'')+'</p>'+(S.parent?'<button class="btn alt" id="dl">이 기록 지우기</button>':''),function(w){
+  openSheet(b.title,(b.photo?'<button data-act="zoom" data-src="'+img(b.photo)+'" data-cap="'+esc(b.title)+'" style="all:unset;display:block;cursor:zoom-in"><img class="prev" style="max-height:300px" src="'+img(b.photo)+'" alt="눌러서 크게 보기"></button><p class="small muted" style="margin:4px 0 0">사진을 누르면 크게 보여요</p>':'')+'<div class="stars" style="font-size:26px;margin-top:8px">'+stars(b.rating)+'</div><p style="white-space:pre-wrap">'+esc(b.note)+'</p><p class="small muted">'+esc(fmtDate(b.date))+(f?' · '+esc(f.name):'')+'</p>'
+   +'<div class="stack" style="gap:8px;margin-top:4px"><span class="lab muted small">지온이가 뽑기</span>'
+   +'<button class="btn alt" data-act="pickBook" data-id="'+esc(b.id)+'" data-kind="m">'+(b.pickM===curM()?'이달의 책 뽑기 취소':'이달의 책으로 뽑기')+'</button>'
+   +'<button class="btn alt" data-act="pickBook" data-id="'+esc(b.id)+'" data-kind="y">'+(b.pickY===curY()?'올해의 책 뽑기 취소':'올해의 책으로 뽑기')+'</button></div>'
+   +(S.parent?'<button class="btn alt" id="dl" style="margin-top:10px">이 기록 지우기</button>':''),function(w){
    var d=$('#dl',w);if(d)d.addEventListener('click',function(){closeSheet();confirmSheet('이 책 기록을 지울까요? 독서왕 도장도 하나 줄어요.',function(){delDoc('books/'+b.id)})})})},
+ pickBook:function(el){setPick(el.dataset.id,el.dataset.kind);closeSheet()},
  addSong:function(){songSheet(null)},
  editSong:function(el){songSheet(S.songs.filter(function(x){return x.id===el.dataset.id})[0])},
  delSong:function(el){var id=el.dataset.id;confirmSheet('이 노래를 지울까요?',function(){delDoc('songs/'+id)})},
