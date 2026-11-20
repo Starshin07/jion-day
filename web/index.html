@@ -116,6 +116,9 @@ select{font:inherit;padding:10px 12px;border:2px solid var(--line);border-radius
 .msgcard{border:2px solid var(--praise);background:color-mix(in srgb,var(--praise) 10%,var(--surface))}
 .msgtext{margin:0;font-family:var(--font-display);font-size:24px;line-height:1.45;white-space:pre-wrap}
 .pad .msgtext{font-size:32px}
+.ytwrap{position:relative;width:100%;aspect-ratio:16/9;margin-top:10px;border-radius:14px;overflow:hidden;background:#000}
+.ytwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+audio{width:100%;margin-top:8px}
 .picks{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pickbox{all:unset;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;border:2px solid var(--book);border-radius:16px;padding:12px 10px;background:color-mix(in srgb,var(--book) 7%,var(--surface));cursor:pointer}
 .pickbox.empty-pick{border-style:dashed;border-color:var(--line);background:none;cursor:default}
@@ -970,12 +973,18 @@ function viewBooks(){
    +'<div class="seg">'+chips+'</div>'+periodSeg('bp',S.bp)
    +(cards||'<div class="empty">아직 기록한 책이 없어요.</div>')+'</div>'}
 
+function ytId(u){
+  var m=String(u||'').match(/(?:youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+  return m?m[1]:''}
+function ytBox(u){
+  var id=ytId(u);if(!id)return '';
+  return '<div class="ytwrap"><iframe src="https://www.youtube-nocookie.com/embed/'+esc(id)+'?rel=0&playsinline=1" title="노래" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>'}
 function viewMusic(){
   var list=S.songs.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
   var cards=list.map(function(s){
     return '<div class="card"><div class="tl"><h3>'+esc(s.title)+'</h3><span class="small muted">'+esc(fmtDate(s.date))+'</span></div>'
      +(s.audio?'<audio controls preload="none" src="'+img(s.audio)+'"></audio>':'')
-     +(s.link?'<p style="margin:8px 0 0"><a href="'+esc(s.link)+'" target="_blank" rel="noopener">노래 들으러 가기</a></p>':'')
+     +(s.link?(ytId(s.link)?ytBox(s.link):'<p style="margin:8px 0 0"><a href="'+esc(s.link)+'" target="_blank" rel="noopener">노래 들으러 가기</a></p>'):'')
      +(s.memo?'<p style="white-space:pre-wrap;margin:8px 0 0">'+esc(s.memo)+'</p>':'')
      +(S.parent?'<div class="row" style="margin-top:8px"><button class="btn alt" data-act="editSong" data-id="'+esc(s.id)+'">고치기</button><button class="btn alt" data-act="delSong" data-id="'+esc(s.id)+'">지우기</button></div>':'')+'</div>'}).join('')||'<div class="empty">아빠가 만든 노래가 여기에 모여요.</div>';
   return '<div class="stack"><div class="card stack" style="gap:10px"><h2>지온이 뮤직박스</h2><p class="muted small" style="margin:0">아빠가 지온이를 위해 만든 노래들이에요.</p>'
@@ -1172,20 +1181,22 @@ function songSheet(s){
    '<div class="field"><label for="st">노래 제목</label><input type="text" id="st" autocomplete="off" value="'+esc(s?s.title:'')+'"></div>'
    +'<div class="field"><label for="sd">만든 날</label><input type="date" id="sd" value="'+esc(s&&s.date?s.date:today())+'"></div>'
    +'<div class="field"><label for="sm">가사나 아빠의 한마디</label><textarea id="sm">'+esc(s?s.memo||'':'')+'</textarea></div>'
-   +(ASSETS?'<div class="field"><span class="lab">노래 파일'+(s&&s.audio?' (새로 올리면 바뀌어요)':'')+'</span><label class="btn alt" style="text-align:center;display:block"><input type="file" id="sa" accept=".mp4,.webm,video/mp4,video/webm" hidden><span id="san">mp4 또는 webm 파일 고르기</span></label><span class="small muted">mp3 파일은 올릴 수 없어요. 아래 링크를 쓰거나 mp4로 바꿔서 올려 주세요.</span></div>':'')
-   +'<div class="field"><label for="sl">노래 링크 (있으면)</label><input type="text" id="sl" placeholder="https://…" autocomplete="off" value="'+esc(s?s.link||'':'')+'"></div><button class="btn" id="ok">저장</button>',
+   +(ASSETS?'<div class="field"><span class="lab">노래 파일'+(s&&s.audio?' (새로 올리면 바뀌어요)':'')+'</span><label class="btn alt" style="text-align:center;display:block"><input type="file" id="sa" accept="audio/*,video/mp4,video/webm" hidden><span id="san">mp3·m4a·mp4 파일 고르기</span></label><span class="small muted">mp3 파일은 올릴 수 없어요. 아래 링크를 쓰거나 mp4로 바꿔서 올려 주세요.</span></div>':'')
+   +'<div class="field"><label for="sl">노래 링크 (있으면)</label><input type="text" id="sl" placeholder="유튜브 주소를 넣으면 앱 안에서 바로 들려요" autocomplete="off" value="'+esc(s?s.link||'':'')+'"></div><button class="btn" id="ok">저장</button>',
    function(w){var f=$('#sa',w);
     if(f)f.addEventListener('change',function(){var file=f.files&&f.files[0];if(!file)return;
       var ext=(file.name.split('.').pop()||'').toLowerCase();
-      if(ext!=='mp4'&&ext!=='webm'){toast('mp4 또는 webm 파일만 올릴 수 있어요');f.value='';return}
-      audioFile={file:file,type:ext==='mp4'?'video/mp4':'video/webm'};$('#san',w).textContent=file.name});
+      var MT={mp3:'audio/mpeg',m4a:'audio/mp4',aac:'audio/aac',wav:'audio/wav',ogg:'audio/ogg',oga:'audio/ogg',flac:'audio/flac',mp4:'video/mp4',webm:'video/webm'};
+      if(!MT[ext]){toast('mp3, m4a, mp4 같은 소리 파일만 올릴 수 있어요');f.value='';return}
+      if(file.size>18*1024*1024){toast('파일이 너무 커요. 18MB보다 작은 파일로 올려 주세요.');f.value='';return}
+      audioFile={file:file,type:MT[ext]};$('#san',w).textContent=file.name+' ('+Math.round(file.size/104857.6)/10+'MB)'});
     $('#ok',w).addEventListener('click',function(){
      var title=$('#st',w).value.trim();if(!title){toast('제목을 써 주세요');return}
      var link=$('#sl',w).value.trim();if(link&&!/^https?:\/\//i.test(link)){toast('링크는 https:// 로 시작해야 해요');return}
      var btn=this;btn.disabled=true;btn.textContent='저장하는 중…';
      var save=function(aid){var data={title:title,date:$('#sd',w).value||today(),memo:$('#sm',w).value.trim(),link:link,audio:aid||'',createdAt:s?(s.createdAt||Date.now()):Date.now()};
        setDoc(s?'songs/'+s.id:newRef('songs').path,data);closeSheet();toast('저장했어요')};
-     if(audioFile)upload(audioFile.file,audioFile.type).then(save).catch(function(){btn.disabled=false;btn.textContent='저장';toast('파일을 올리지 못했어요. 20MB 이하의 mp4나 webm인지 확인해 주세요.')});
+     if(audioFile)upload(audioFile.file,audioFile.type).then(save).catch(function(){btn.disabled=false;btn.textContent='저장';toast('파일을 올리지 못했어요. 18MB보다 작은 소리 파일인지 확인해 주세요.')});
      else save(s?s.audio:'')})})}
 
 function settingsSheet(){
