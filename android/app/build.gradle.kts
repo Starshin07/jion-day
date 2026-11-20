@@ -12,8 +12,20 @@ android {
     versionCode = 1
     versionName = "1.0"
   }
+  signingConfigs {
+    create("jion") {
+      storeFile = file("jion.jks")
+      storePassword = "TlJjzhvWKl-9PCqb3jHw3ZBZ"
+      keyAlias = "jionday"
+      keyPassword = "TlJjzhvWKl-9PCqb3jHw3ZBZ"
+    }
+  }
   buildTypes {
-    release { isMinifyEnabled = false }
+    getByName("debug") { signingConfig = signingConfigs.getByName("jion") }
+    getByName("release") {
+      isMinifyEnabled = false
+      signingConfig = signingConfigs.getByName("jion")
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
