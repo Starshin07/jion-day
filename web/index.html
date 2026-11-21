@@ -832,14 +832,18 @@ function viewHome(){
    +'<div class="card stamp s-book">'+sBook()+'<b>'+S.books.length+'</b><span class="small muted">독서왕</span></div></div>'
    +calendar()+'</div></div>'}
 
+function praiseKey(p){return (p.date||p.id||'')+' '+String(p.at||p.createdAt||0)}
+function praiseToday(){var t=today();return S.praise.filter(function(p){return (p.date||p.id)===t}).length}
 function viewPraise(){
-  var n=S.praise.length,t=today();
-  var has=S.praise.some(function(p){return p.id===t});
-  var sorted=S.praise.slice().sort(function(a,b){return a.id<b.id?1:-1});
-  var wall=sorted.map(function(p){return '<div class="st s-praise" title="'+esc(p.reason||'')+'">'+sPraise()+'<span>'+esc(fmtDate(p.date))+'</span></div>'}).join('')||'<div class="empty">아직 칭찬 도장이 없어요.</div>';
-  var reasons=sorted.slice(0,5).filter(function(p){return p.reason}).map(function(p){return '<div class="bubble"><span class="small muted">'+esc(fmtDate(p.date))+'</span><br>'+esc(p.reason)+'</div>'}).join('');
+  var n=S.praise.length,tn=praiseToday();
+  var sorted=S.praise.slice().sort(function(a,b){return praiseKey(a)<praiseKey(b)?1:-1});
+  var wall=sorted.map(function(p){return '<div class="st s-praise" title="'+esc(p.reason||'')+'">'+sPraise()+'<span>'+esc(fmtDate(p.date||p.id))+'</span></div>'}).join('')||'<div class="empty">아직 칭찬 도장이 없어요.</div>';
+  var reasons=sorted.slice(0,6).filter(function(p){return p.reason}).map(function(p){
+    return '<div class="bubble"><div class="tl"><span class="small muted">'+esc(fmtDate(p.date||p.id))+'</span>'
+     +(S.parent?'<button class="px" data-act="praiseDel" data-id="'+esc(p.id)+'" aria-label="지우기">✕</button>':'')+'</div>'+esc(p.reason)+'</div>'}).join('');
   return '<div class="stack"><div class="card stack" style="gap:10px"><div class="tl"><h2>칭찬 도장</h2><span class="s-praise" style="font-family:var(--font-display);font-size:28px">'+n+'개</span></div>'
-   +(S.parent?(has?'<button class="btn alt" disabled>오늘 칭찬 도장을 찍었어요</button>':'<button class="btn" data-act="praiseNew">오늘 칭찬 도장 찍기</button>'):'')
+   +'<p class="muted small" style="margin:0">오늘 '+tn+'개 받았어요</p>'
+   +(S.parent?'<button class="btn" data-act="praiseNew">칭찬 도장 찍기</button>':'')
    +'</div>'
    +petCard()
    +(reasons?'<div class="card"><h3>최근 칭찬</h3>'+reasons+'</div>':'')
@@ -1031,10 +1035,14 @@ var A={
       S.parent=true;closeSheet();render()}
     $('#pinok',w).addEventListener('click',go);inp.addEventListener('keydown',function(e){if(e.key==='Enter')go()})})},
  praiseNew:function(){
-  openSheet('오늘 칭찬 도장','<div class="field"><label for="r">무엇을 칭찬할까요?</label><textarea id="r" placeholder="예: 동생이랑 사이좋게 놀았어요"></textarea></div><button class="btn" id="ok">도장 찍기</button>',function(w){
-   $('#ok',w).addEventListener('click',function(){var d=today();
-     if(S.praise.some(function(p){return p.id===d})){toast('오늘은 이미 찍었어요');closeSheet();return}
-     setDoc('praise/'+d,{date:d,reason:$('#r',w).value.trim(),at:Date.now()});closeSheet();popStamp('praise','칭찬 도장!')})})},
+  openSheet('칭찬 도장 찍기','<div class="field"><label for="r">무엇을 칭찬할까요?</label><textarea id="r" placeholder="예: 동생이랑 사이좋게 놀았어요"></textarea></div>'
+   +'<p class="muted small" style="margin:0 0 10px">오늘 '+praiseToday()+'개 찍었어요. 하루에 여러 번 찍어도 돼요.</p>'
+   +'<button class="btn" id="ok">도장 찍기</button>',function(w){
+   $('#ok',w).addEventListener('click',function(){
+     var d=today(),r=$('#r',w).value.trim();
+     addDoc('praise',{date:d,reason:r,at:Date.now(),createdAt:Date.now()});
+     closeSheet();popStamp('praise','칭찬 도장!')})})},
+ praiseDel:function(el){confirmSheet('이 칭찬 도장을 지울까요?',function(){delDoc('praise/'+el.dataset.id);toast('지웠어요')})},
  addWord:function(){
   var ph={has:false},lang='en';
   openSheet('사전에 단어 올리기',

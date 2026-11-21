@@ -1,4 +1,4 @@
-var V='jion-v4';
+var V='jion-v5';
 var CORE=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable.png',
 './char/j1.png','./char/j2.png','./char/j3.png','./char/j4.png','./char/j5.png','./char/j6.png',
 './char/m1.png','./char/m2.png','./char/m3.png','./char/m4.png','./char/m5.png','./char/m6.png',
