@@ -1,7 +1,9 @@
 package kr.jion.day
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -21,9 +23,10 @@ import android.widget.TextView
 
 class MainActivity : Activity() {
 
-    private lateinit var web: WebView
+    private lateinit var web: NoExtractWebView
     private var offline: View? = null
     private var pendingChooser: ValueCallback<Array<Uri>>? = null
+    private var pendingPerm: PermissionRequest? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,7 +36,7 @@ class MainActivity : Activity() {
         root.orientation = LinearLayout.VERTICAL
         setContentView(root)
 
-        web = WebView(this)
+        web = NoExtractWebView(this)
         root.addView(web, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT))
 
@@ -70,8 +73,15 @@ class MainActivity : Activity() {
 
         web.webChromeClient = object : WebChromeClient() {
             override fun onPermissionRequest(request: PermissionRequest?) {
+                val req = request ?: return
                 runOnUiThread {
-                    try { request?.grant(request.resources) } catch (e: Exception) { request?.deny() }
+                    val wantsCamera = req.resources.any { it == PermissionRequest.RESOURCE_VIDEO_CAPTURE }
+                    if (wantsCamera && !hasCamera()) {
+                        pendingPerm = req
+                        requestPermissions(arrayOf(Manifest.permission.CAMERA), REQ_CAM)
+                    } else {
+                        try { req.grant(req.resources) } catch (e: Exception) { req.deny() }
+                    }
                 }
             }
             override fun onShowFileChooser(
@@ -96,6 +106,26 @@ class MainActivity : Activity() {
         if (savedInstanceState != null) web.restoreState(savedInstanceState) else web.loadUrl(APP_URL)
 
         JionWidget.schedule(this)
+
+        if (!hasCamera()) {
+            try { requestPermissions(arrayOf(Manifest.permission.CAMERA), REQ_CAM) } catch (e: Exception) {}
+        }
+    }
+
+    private fun hasCamera(): Boolean =
+        checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != REQ_CAM) return
+        val req = pendingPerm ?: return
+        pendingPerm = null
+        val ok = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+        runOnUiThread {
+            try { if (ok) req.grant(req.resources) else req.deny() } catch (e: Exception) {}
+        }
     }
 
     private fun showOffline(root: LinearLayout) {
@@ -169,5 +199,6 @@ class MainActivity : Activity() {
         const val APP_URL = "https://REPLACE_OWNER.github.io/REPLACE_REPO/"
         const val APP_HOST = "github.io"
         private const val REQ_FILE = 7001
+        private const val REQ_CAM = 7002
     }
 }

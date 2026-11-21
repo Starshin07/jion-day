@@ -232,8 +232,9 @@ textarea{min-height:96px;resize:vertical}
 .starpick button{font-size:34px;line-height:1;border:0;background:none;padding:4px;color:var(--line)}
 .starpick button.on{color:var(--praise)}
 .sheet-wrap{position:fixed;inset:0;background:rgba(10,14,40,.5);display:flex;align-items:flex-end;justify-content:center;z-index:20}
-.sheet{background:var(--surface);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom))}
+.sheet{background:var(--surface);width:100%;max-width:640px;max-height:92dvh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-radius:22px 22px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom))}
 @media (min-width:760px){.sheet-wrap{align-items:center}.sheet{border-radius:22px}}
+@media (orientation:landscape) and (max-height:560px){.sheet{max-height:98dvh;padding:12px 14px calc(14px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0}.sheet-h h2{font-size:20px}.field{margin-bottom:10px}}
 .sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .x{border:0;background:var(--soft);border-radius:50%;width:44px;height:44px;font-size:20px}
 .prev{max-width:100%;max-height:220px;border-radius:12px;margin-top:8px}
@@ -531,12 +532,18 @@ function bindPhoto(id,holder,type,max){
       resize(file,max||1280,type).then(take).catch(function(){toast('사진을 읽지 못했어요.')})})})}
 
 /* ---------- sheets ---------- */
+function keyboardFix(w){
+  var sel='input,textarea,select';
+  [].forEach.call(w.querySelectorAll(sel),function(el){
+    el.addEventListener('focus',function(){
+      setTimeout(function(){try{el.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}},260)})})}
 function openSheet(title,body,mount){
   closeSheet();
   var w=document.createElement('div');w.className='sheet-wrap';w.id='sheet';
   w.innerHTML='<div class="sheet" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="sheet-h"><h2>'+esc(title)+'</h2><button class="x" data-act="close" aria-label="닫기">✕</button></div>'+body+'</div>';
   w.addEventListener('click',function(e){if(e.target===w)closeSheet()});
   $('#layer').appendChild(w);if(mount)mount(w);
+  keyboardFix(w);
   var f=w.querySelector('input[type=text],textarea');if(f)f.focus()}
 function closeSheet(){if(TMR){clearInterval(TMR);TMR=null}CAMS.forEach(function(f){try{f()}catch(e){}});CAMS=[];var s=$('#sheet');if(s)s.remove()}
 function confirmSheet(msg,yes){
