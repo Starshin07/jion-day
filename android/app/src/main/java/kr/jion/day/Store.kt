@@ -39,6 +39,31 @@ object Store {
         e.apply()
     }
 
+    /** 새 소식 저장. 알림을 보낼지 판단하는 데 쓴다. */
+    class News(
+        val msgAt: Long, val praiseN: Long, val praiseLast: String,
+        val wordN: Long, val wordLast: String, val msg: String
+    )
+
+    private var pendingNews: News? = null
+
+    fun saveNews(
+        c: Context, msgAt: Long, praiseN: Long, praiseLast: String,
+        wordN: Long, wordLast: String, msg: String
+    ) {
+        pendingNews = News(msgAt, praiseN, praiseLast, wordN, wordLast, msg)
+    }
+
+    fun takeNews(): News? { val n = pendingNews; pendingNews = null; return n }
+
+    fun seenMsgAt(c: Context): Long = p(c).getLong("seen_msgAt", -1L)
+    fun seenPraise(c: Context): Long = p(c).getLong("seen_praiseN", -1L)
+    fun seenWord(c: Context): Long = p(c).getLong("seen_wordN", -1L)
+    fun markSeen(c: Context, msgAt: Long, praiseN: Long, wordN: Long) {
+        p(c).edit().putLong("seen_msgAt", msgAt).putLong("seen_praiseN", praiseN)
+            .putLong("seen_wordN", wordN).apply()
+    }
+
     fun widgetMsg(c: Context): String = p(c).getString("w_msg", "") ?: ""
     fun widgetTasks(c: Context): List<Pair<String, Boolean>> {
         val sp = p(c); val n = sp.getInt("w_tn", 0)

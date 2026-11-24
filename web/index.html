@@ -264,7 +264,7 @@ h3,.card p,.bubble{white-space:pre-wrap;overflow-wrap:anywhere}
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
 .field label,.lab{font-weight:700;font-size:15px}
 input[type=text],input[type=password],input[type=number],input[type=date],textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:12px;min-height:48px}
-textarea{min-height:96px;resize:vertical}
+textarea{min-height:96px;resize:vertical;max-height:55dvh;overflow:auto}
 .seg{display:flex;gap:8px;flex-wrap:wrap}
 .seg button{border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 14px;min-height:48px;font-weight:500}
 .seg button.on{border-color:var(--primary);background:var(--soft);font-weight:700}
@@ -406,13 +406,22 @@ var WLAST='';
 function syncWidget(){
   if(!DB||!S.loaded.tasks||!S.loaded.checks)return;
   var tc=todayCheck(),done=tc.done||[],now=new Date(),dow=now.getDay();
+  var msg=S.msg||{};
+  var withMean=S.words.filter(function(x){return (x.meaning||'').trim()});
+  var lastMean=withMean.slice().sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0)}).pop();
+  var lastPr=S.praise.slice().sort(function(a,b){return (a.at||a.createdAt||0)-(b.at||b.createdAt||0)}).pop();
   var w={date:today(),
+    msgAt:+(msg.at||0),
+    praiseN:S.praise.length,
+    praiseLast:(lastPr&&lastPr.reason)||'',
+    wordN:withMean.length,
+    wordLast:(lastMean&&String(lastMean.text||'').split('\n')[0])||'',
     tasks:activeTasks().slice(0,8).map(function(t){return {t:t.title,d:done.indexOf(t.id)>-1?1:0}}),
     msg:(S.msg&&S.msg.text)||'',
     sched:schedList(dow).slice(0,6).map(function(x){return {t:x.t,h:x.time||''}}),
     prep:((prepOf(today())||{}).items||[]).map(function(x){return x.t}),
     at:Date.now()};
-  var k=JSON.stringify([w.tasks,w.msg,w.sched,w.prep,w.date]);
+  var k=JSON.stringify([w.tasks,w.msg,w.sched,w.prep,w.date,w.msgAt,w.praiseN,w.wordN]);
   if(k===WLAST)return;WLAST=k;setDoc('app/widget',w).then(function(){
     try{if(window.AndroidBridge&&AndroidBridge.refreshWidget)AndroidBridge.refreshWidget()}catch(e){}})}
 
@@ -572,6 +581,11 @@ function bindPhoto(id,holder,type,max){
       resize(file,max||1280,type).then(take).catch(function(){toast('사진을 읽지 못했어요.')})})})}
 
 /* ---------- sheets ---------- */
+function autoGrow(w){
+  [].forEach.call(w.querySelectorAll('textarea'),function(t){
+    var fit=function(){t.style.height='auto';t.style.height=Math.min(t.scrollHeight+4,Math.round(window.innerHeight*0.55))+'px'};
+    t.addEventListener('input',fit);t.addEventListener('focus',fit);t.addEventListener('change',fit);
+    setTimeout(fit,0)})}
 function keyboardFix(w){
   var sel='input,textarea,select';
   [].forEach.call(w.querySelectorAll(sel),function(el){
@@ -583,7 +597,7 @@ function openSheet(title,body,mount){
   w.innerHTML='<div class="sheet" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="sheet-h"><h2>'+esc(title)+'</h2><button class="x" data-act="close" aria-label="닫기">✕</button></div>'+body+'</div>';
   w.addEventListener('click',function(e){if(e.target===w)closeSheet()});
   $('#layer').appendChild(w);if(mount)mount(w);
-  keyboardFix(w);
+  keyboardFix(w);autoGrow(w);
   var f=w.querySelector('input[type=text],textarea');if(f)f.focus()}
 function closeSheet(){if(TMR){clearInterval(TMR);TMR=null}CAMS.forEach(function(f){try{f()}catch(e){}});CAMS=[];var s=$('#sheet');if(s)s.remove()}
 function confirmSheet(msg,yes){
@@ -1145,7 +1159,7 @@ var A={
      if(ph.has)ph.getBlob().then(function(b){return upload(b)}).then(go).catch(function(){btn.disabled=false;btn.textContent='사전에 올리기';toast('사진을 올리지 못했어요')});else go('')})})},
  meaning:function(el){
   var w=S.words.filter(function(x){return x.id===el.dataset.id})[0];if(!w)return;
-  openSheet('뜻 알려주기','<p><b>'+esc(w.text||'(사진 단어)')+'</b></p><div class="field"><label for="mn">뜻과 예문</label><textarea id="mn">'+esc(w.meaning||'')+'</textarea></div><button class="btn" id="ok">저장</button>',function(s){
+  openSheet('뜻 알려주기','<p><b>'+esc(w.text||'(사진 단어)')+'</b></p><div class="field"><label for="mn">뜻과 예문</label><textarea id="mn" rows="8">'+esc(w.meaning||'')+'</textarea></div><button class="btn" id="ok">저장</button>',function(s){
    $('#ok',s).addEventListener('click',function(){var nw=Object.assign({},w);delete nw.id;nw.meaning=$('#mn',s).value.trim();setDoc('words/'+w.id,nw);closeSheet()})})},
  delWord:function(el){var id=el.dataset.id;confirmSheet('이 단어를 지울까요? 레벨 계산에서도 빠져요.',function(){delDoc('words/'+id)})},
  newFolder:function(){

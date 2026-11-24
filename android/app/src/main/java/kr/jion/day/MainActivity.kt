@@ -110,6 +110,10 @@ class MainActivity : Activity() {
         if (!hasCamera()) {
             try { requestPermissions(arrayOf(Manifest.permission.CAMERA), REQ_CAM) } catch (e: Exception) {}
         }
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+            try { requestPermissions(arrayOf("android.permission.POST_NOTIFICATIONS"), REQ_NOTI) } catch (e: Exception) {}
+        }
     }
 
     private fun hasCamera(): Boolean =
@@ -200,5 +204,6 @@ class MainActivity : Activity() {
         const val APP_HOST = "github.io"
         private const val REQ_FILE = 7001
         private const val REQ_CAM = 7002
+        private const val REQ_NOTI = 7003
     }
 }

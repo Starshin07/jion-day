@@ -49,6 +49,26 @@ object Fetch {
         val f = root.optJSONObject("fields") ?: return
         val msg = f.optJSONObject("msg")?.optString("stringValue", "") ?: ""
 
+        fun num(key: String): Long {
+            val o = f.optJSONObject(key) ?: return 0L
+            return when {
+                o.has("integerValue") -> o.optString("integerValue", "0").toLongOrNull() ?: 0L
+                o.has("doubleValue") -> o.optDouble("doubleValue", 0.0).toLong()
+                else -> 0L
+            }
+        }
+        fun str(key: String): String = f.optJSONObject(key)?.optString("stringValue", "") ?: ""
+
+        Store.saveNews(
+            c,
+            msgAt = num("msgAt"),
+            praiseN = num("praiseN"),
+            praiseLast = str("praiseLast"),
+            wordN = num("wordN"),
+            wordLast = str("wordLast"),
+            msg = msg
+        )
+
         val tasks = ArrayList<Pair<String, Boolean>>()
         f.optJSONObject("tasks")?.optJSONObject("arrayValue")?.optJSONArray("values")?.let { arr ->
             for (i in 0 until arr.length()) {

@@ -15,6 +15,9 @@ class WidgetWorker(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val ok = try { Fetch.refresh(applicationContext) } catch (e: Exception) { false }
+        if (ok) {
+            try { Notify.checkAndNotify(applicationContext) } catch (e: Exception) {}
+        }
         withContext(Dispatchers.Main) { JionWidget.refreshAll(applicationContext) }
         if (ok) Result.success() else Result.retry()
     }
